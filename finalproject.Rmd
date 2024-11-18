@@ -1,0 +1,18 @@
+---
+title: "Final Project"
+author: "Suheng Yao"
+date: "2024-11-18"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+```{r}
+df <- read.csv("google_play_store_dataset.csv")
+glimpse(df)
+print(unique(df$Category))
+```
+
