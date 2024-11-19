@@ -1,5 +1,5 @@
 ---
-title: "Final Project"
+title: "Google Play Store Data Analysis Report"
 author: "Suheng Yao"
 date: "2024-11-18"
 output: pdf_document
@@ -10,9 +10,24 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 ```
 
-```{r}
-df <- read.csv("google_play_store_dataset.csv")
-glimpse(df)
-print(unique(df$Category))
-```
 
+```{r, echo=FALSE}
+# Load in The Dataset
+df <- read.csv("google_play_store_dataset.csv")
+```
+# Abstract
+
+# Introduction
+
+Google Play Store has always been the most popular and largest app store for Android phone users across the world. Since it is pre-installed on supporting Android devices, and the operative system holds over 70 percent of the global market, Google Play Store becomes the default app hub for most of the Android users worldwide(). Up until the second quarter of 2024, there are 2.26 million apps available in the store().
+
+In this project, the main question of interest is: What are the important factors that can affect the apps ratings? The reasons why I am interested in this question are divided into two part: first of all, since I use Google Play to install apps every day, I am always curious about what kind of apps can have good ratings scores and why some apps I find easy to use get low rating score. Secondly, by doing this analysis, if I want to build apps to publish on Google Play in the future, then I will know which essential factors to focus on or the popular fields to go into.
+
+This project report will be divided into four parts: methods section will talk about model selection and model building; results section will talk about the important findings after fitting the models; discussion section will further analyze those findings and talk about the next steps for the analysis; appendix is the last part, which will include EDA and initial understandings of the data.
+
+# Appendix
+## Exploratory Data Analysis
+```{r, echo=FALSE}
+glimpse(df)
+```
+Looking at the structure of the dataset, there are in total 10,841 observations and 13 variables related to each app. The response variable is **Rating**, which is a continuous variable.
