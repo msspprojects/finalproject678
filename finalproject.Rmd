@@ -26,8 +26,37 @@ In this project, the main question of interest is: What are the important factor
 This project report will be divided into four parts: methods section will talk about model selection and model building; results section will talk about the important findings after fitting the models; discussion section will further analyze those findings and talk about the next steps for the analysis; appendix is the last part, which will include EDA and initial understandings of the data.
 
 # Appendix
-## Exploratory Data Analysis
+## Exploratory Data Analysis and Data Cleaning
 ```{r, echo=FALSE}
 glimpse(df)
 ```
-Looking at the structure of the dataset, there are in total 10,841 observations and 13 variables related to each app. The response variable is **Rating**, which is a continuous variable.
+Looking at the structure of the dataset, there are in total 10,841 observations and 13 variables related to each app. The response variable is **Rating**, which is a continuous variable. By looking at the column names of the data, "Category" and "Genre" seem to have similar data, I can print out the unique values in those two columns:
+```{r, echo=FALSE}
+print(unique(df$Category))
+print(unique(df$Genres))
+```
+Based on the printed results above, "Genre" is just the more detailed classification of "Category", since in this project, I mostly focus on the general groups of apps, I can remove the "Genre" column and change the Category name to lower case.
+```{r, echo=FALSE}
+df <- df %>%
+  select(-Genres) %>%
+
+df$Category <- tolower(df$Category)
+print(head(df))
+```
+Also, from the distinct values of category, there is a category called "1.9", which does not make sense. Since there is only one record of data with category "1.9", I can just remove this record from the dataset.
+```{r, echo=FALSE}
+df <- df %>%
+  filter(Category != 1.9)
+```
+Now, let's check if there are any duplicated apps in the dataset:
+```{r}
+any(duplicated(df$App))
+print(sum(duplicated(df$App)))
+```
+From the analysis above, there are 1181 duplicated apps in the dataset, to make further analysis easier, I will just remove those 
+```{r}
+df1 <- df %>%
+  filter(df$App=="Mcqueen Coloring pages")
+
+```
+
