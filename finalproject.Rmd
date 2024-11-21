@@ -26,7 +26,7 @@ In this project, the main question of interest is: What are the important factor
 This project report will be divided into four parts: methods section will talk about model selection and model building; results section will talk about the important findings after fitting the models; discussion section will further analyze those findings and talk about the next steps for the analysis; appendix is the last part, which will include EDA and initial understandings of the data.
 
 # Appendix
-## Exploratory Data Analysis and Data Cleaning
+## Data Cleaning
 ```{r, echo=FALSE}
 glimpse(df)
 ```
@@ -38,7 +38,7 @@ print(unique(df$Genres))
 Based on the printed results above, "Genre" is just the more detailed classification of "Category", since in this project, I mostly focus on the general groups of apps, I can remove the "Genre" column and change the Category name to lower case.
 ```{r, echo=FALSE}
 df <- df %>%
-  select(-Genres) %>%
+  select(-Genres)
 
 df$Category <- tolower(df$Category)
 print(head(df))
@@ -49,14 +49,115 @@ df <- df %>%
   filter(Category != 1.9)
 ```
 Now, let's check if there are any duplicated apps in the dataset:
-```{r}
-any(duplicated(df$App))
+```{r, echo=FALSE}
 print(sum(duplicated(df$App)))
 ```
-From the analysis above, there are 1181 duplicated apps in the dataset, to make further analysis easier, I will just remove those 
-```{r}
-df1 <- df %>%
-  filter(df$App=="Mcqueen Coloring pages")
-
+From the analysis above, there are 1181 duplicated apps in the dataset, to make further analysis easier, I will just keep the first occurrence of each app record.
+```{r, echo=FALSE}
+df <- df %>%
+  distinct(App, .keep_all = TRUE)
+```
+Now, I need to check if there are NA values in the dataset:
+```{r, echo=FALSE}
+summary(df)
+```
+From the result shown above, in the response variable "Rating", there are 1463 missing values. To maintain the size of the data, I will fill in those missing values using median values of the "Rating" column.
+```{r, echo=FALSE}
+df$Rating[is.na(df$Rating)] <- median(df$Rating, na.rm = TRUE)
+summary(df)
+```
+Since it makes more sense to talk about installs, reviews, size and price in numerical values, I will change those variables from categorical to numeric:
+```{r, echo=FALSE, warning=FALSE}
+df$Reviews <- as.numeric(df$Reviews)
+df$Size <- as.numeric(gsub("M", "", df$Size))
+colnames(df)[colnames(df) == "Size"] <- "Size(in MB)"
+df$Price <- as.numeric(gsub("\\$", "", df$Price))
+summary(df)
+```
+Since Most of the NA values in Size are related to "Varies with Device" value in the original dataset, and in this project, I want to mostly focus on the app with fixed size, I will just remove those app records with varied app sizes.
+```{r, echo=FALSE}
+df <- df %>%
+  filter(!is.na(`Size(in MB)`))
 ```
 
+Transforming Installs is a more complex matter, I will solve this problem differently. First check the distinct values in the variable "Installs":
+```{r, echo=FALSE}
+print(unique(df$Installs))
+```
+To convert those values into numeric values and avoid duplicate values, take "500+" as an example, I will change it to a value between 500 to 1000 because "1000+" will be on a different level.
+```{r, echo=FALSE}
+df$Installs <- as.numeric(gsub("\\+", "", gsub(",", "", df$Installs)))
+
+generate_installs <- function(x) {
+  if (x == 0) {
+    return(0)
+  } else if (x == 1) {
+    lower_bound <- x
+    upper_bound <- 10
+  } else if (x == 5) {
+    lower_bound <- x
+    upper_bound <- 10
+  } else if (x == 10) {
+    lower_bound <- x
+    upper_bound <- 50
+  } else if (x == 50) {
+    lower_bound <- x
+    upper_bound <- 100
+  } else if (x == 100) {
+    lower_bound <- x
+    upper_bound <- 500
+  } else if (x == 500) {
+    lower_bound <- x
+    upper_bound <- 1000
+  } else if (x == 1000) {
+    lower_bound <- x
+    upper_bound <- 5000
+  } else if (x == 5000) {
+    lower_bound <- x
+    upper_bound <- 10000
+  } else if (x == 10000) {
+    lower_bound <- x
+    upper_bound <- 50000
+  } else if (x == 50000) {
+    lower_bound <- x
+    upper_bound <- 100000
+  } else if (x == 100000) {
+    lower_bound <- x
+    upper_bound <- 500000
+  } else if (x == 500000) {
+    lower_bound <- x
+    upper_bound <- 1000000
+  } else if (x == 1000000) {
+    lower_bound <- x
+    upper_bound <- 5000000
+  } else if (x == 5000000) {
+    lower_bound <- x
+    upper_bound <- 10000000
+  } else if (x == 10000000) {
+    lower_bound <- x
+    upper_bound <- 50000000
+  } else if (x == 50000000) {
+    lower_bound <- x
+    upper_bound <- 100000000
+  } else if (x == 100000000) {
+    lower_bound <- x
+    upper_bound <- 500000000
+  } else if (x == 500000000) {
+    lower_bound <- x
+    upper_bound <- 1000000000
+  } else if (x == 1000000000) {
+    lower_bound <- x
+    upper_bound <- 2000000000
+  } else {
+    lower_bound <- x
+    upper_bound <- x * 10  # Fallback case if something is missed
+  }
+    return(round(runif(1, min = lower_bound, max = upper_bound)))
+}
+
+df$Installs <- sapply(df$Installs, generate_installs)
+summary(df)
+```
+After those data cleaning is done, I will start doing EDA.
+
+## EDA
