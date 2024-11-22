@@ -8,6 +8,7 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
+library(ggplot2)
 ```
 
 
@@ -161,3 +162,55 @@ summary(df)
 After those data cleaning is done, I will start doing EDA.
 
 ## EDA
+### Step 1: Bar Plot Counting Distinct Apps in Each Category
+```{r, echo=FALSE}
+category_counts <- df %>%
+  group_by(Category) %>%
+  summarise(App_Count = n_distinct(App)) %>%
+  arrange(desc(App_Count))
+
+ggplot(category_counts, aes(x = reorder(Category, -App_Count), y = App_Count)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  theme_minimal() +
+  labs(title = "Number of Distinct Apps in Each Category",
+       x = "Category",
+       y = "Number of Distinct Apps") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+From the count of distinct apps, it is clear that category family gets the most number of apps, with more than 1500 apps in the category. The second most category is game, which is only half the number of the family category, and the third most is the tools category. The category with the least number of distinct apps is comics, with only less than 250 apps.
+
+### Step 2: Box Plot of Distribution of Rating Scores for Each Category
+```{r, echo=FALSE}
+ggplot(df, aes(x = reorder(Category, Rating, FUN = median), y = Rating)) +
+  geom_boxplot(fill = "steelblue", color = "black", outlier.color = "red", outlier.size = 2) +
+  theme_minimal() +
+  labs(title = "Distribution of Rating Scores by Category",
+       x = "Category",
+       y = "Rating") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 10),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(size = 14, face = "bold")) +
+  coord_flip()
+
+```
+From the box plot for each category above, it is clear that almost all the categories have median value greater than 4. Also, maybe due to less number of apps in comics category, it is the only category without outliers. What's more, the last four categories at bottom: Tools, Maps and Navigation, Entertainment and Dating tend to have lower median values compared to other groups, which may reflect the user dissatisfaction for those app groups.
+
+### Step 3: Table of Distribution of Number of Installs in Each Category
+```{r, echo=FALSE}
+install_dist <- df %>%
+  group_by(Category) %>%
+  summarise(
+    count = n(),
+    min = min(Installs, na.rm = TRUE),
+    median = median(Installs, na.rm = TRUE),
+    max = max(Installs, na.rm = TRUE)
+  ) %>%
+  arrange(desc(count))
+
+print(install_dist)
+```
+### Step 4: Distribution of Reviews in Each Category
+```{r, echo=FALSE}
+
+```
+
