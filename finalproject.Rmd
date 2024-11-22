@@ -9,6 +9,7 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(ggplot2)
+library(corrplot)
 ```
 
 
@@ -208,9 +209,43 @@ install_dist <- df %>%
   arrange(desc(count))
 
 print(install_dist)
+
+ggplot(df, aes(x = reorder(Category, Installs, FUN = median), y = Installs)) +
+  geom_boxplot(fill = "steelblue", color = "black", outlier.color = "red", outlier.size = 2) +
+  theme_minimal() +
+  labs(title = "Distribution of Installs by Category",
+       x = "Category",
+       y = "Number of Installs") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 10),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(size = 14, face = "bold")) +
+  coord_flip()
 ```
+From this boxplot above, in general, games tend to have the more number of installs, and the range of app installs in the game category also tend to be greater than other categories. However, there is one outlier in personalization category, which has over $1.5*10^9$ installs.
+
 ### Step 4: Distribution of Reviews in Each Category
 ```{r, echo=FALSE}
-
+ggplot(df, aes(x = reorder(Category, Reviews, FUN = median), y = Reviews)) +
+  geom_boxplot(fill = "steelblue", color = "black", outlier.color = "red", outlier.size = 2) +
+  theme_minimal() +
+  labs(title = "Distribution of Reviews by Category",
+       x = "Category",
+       y = "Reviews") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 10),
+        axis.title = element_text(size = 12),
+        plot.title = element_text(size = 14, face = "bold")) +
+  coord_flip()
 ```
+Similar to installs, game category still tend to have more reviews than the other category, with the most number of reviews over $4*10^7$.
 
+### Step 5: Correlation Analysis(Check if there is multicollinearity)
+```{r, echo=FALSE}
+numerical_data <- df[, sapply(df, is.numeric)]
+cor_matrix <- cor(numerical_data, use = "complete.obs")
+
+
+corrplot(cor_matrix, method = "color", type = "full", 
+         tl.col = "black", tl.srt = 45, addCoef.col = "black",
+         col = colorRampPalette(c("blue", "white", "red"))(200))
+```
+From the correlation plot, most of the numerical variables do not have strong correlation with each other, except the installs and review. Their correlation is moderate to strong, at 0.65, which means that
