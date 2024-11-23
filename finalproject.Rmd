@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(ggplot2)
 library(corrplot)
+library(MASS)
 ```
 
 
@@ -40,7 +41,7 @@ print(unique(df$Genres))
 Based on the printed results above, "Genre" is just the more detailed classification of "Category", since in this project, I mostly focus on the general groups of apps, I can remove the "Genre" column and change the Category name to lower case.
 ```{r, echo=FALSE}
 df <- df %>%
-  select(-Genres)
+  dplyr::select(-Genres)
 
 df$Category <- tolower(df$Category)
 print(head(df))
@@ -193,10 +194,20 @@ ggplot(df, aes(x = reorder(Category, Rating, FUN = median), y = Rating)) +
         plot.title = element_text(size = 14, face = "bold")) +
   coord_flip()
 
+rating_dist <- df %>%
+  group_by(Category) %>%
+  summarise(
+    count = n(),
+    min = min(Rating, na.rm = TRUE),
+    mean = mean(Rating, na.rm = TRUE),
+    sd = sd(Rating, na.rm = TRUE),
+    max = max(Rating, na.rm = TRUE)
+  ) %>%
+  arrange(desc(count))
 ```
 From the box plot for each category above, it is clear that almost all the categories have median value greater than 4. Also, maybe due to less number of apps in comics category, it is the only category without outliers. What's more, the last four categories at bottom: Tools, Maps and Navigation, Entertainment and Dating tend to have lower median values compared to other groups, which may reflect the user dissatisfaction for those app groups.
 
-### Step 3: Table of Distribution of Number of Installs in Each Category
+### Step 3: Table and Box Plot of Distribution of Number of Installs in Each Category
 ```{r, echo=FALSE}
 install_dist <- df %>%
   group_by(Category) %>%
@@ -209,36 +220,42 @@ install_dist <- df %>%
   arrange(desc(count))
 
 print(install_dist)
+df <- df %>%
+  mutate(Installs = as.numeric(scale(Installs)))
+
 
 ggplot(df, aes(x = reorder(Category, Installs, FUN = median), y = Installs)) +
   geom_boxplot(fill = "steelblue", color = "black", outlier.color = "red", outlier.size = 2) +
   theme_minimal() +
-  labs(title = "Distribution of Installs by Category",
+  labs(title = "Distribution of Standardized Installs by Category",
        x = "Category",
-       y = "Number of Installs") +
+       y = "Standardized Installs") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 10),
         axis.title = element_text(size = 12),
         plot.title = element_text(size = 14, face = "bold")) +
   coord_flip()
 ```
-From this boxplot above, in general, games tend to have the more number of installs, and the range of app installs in the game category also tend to be greater than other categories. However, there is one outlier in personalization category, which has over $1.5*10^9$ installs.
+The table is based on original values of installs, and to make every numeric on a similar scale, I try to standardize the install variable, and the box plot is based on standardized install values. From this boxplot above, in general, games tend to have the more number of installs, and the range of app installs in the game category also tend to be greater than other categories. However, there is one outlier in personalization category, which has over $1.5*10^9$ installs.
 
 ### Step 4: Distribution of Reviews in Each Category
 ```{r, echo=FALSE}
+df <- df %>%
+  mutate(Reviews = as.numeric(scale(Reviews)))
+
 ggplot(df, aes(x = reorder(Category, Reviews, FUN = median), y = Reviews)) +
   geom_boxplot(fill = "steelblue", color = "black", outlier.color = "red", outlier.size = 2) +
   theme_minimal() +
-  labs(title = "Distribution of Reviews by Category",
+  labs(title = "Distribution of Standardized Reviews by Category",
        x = "Category",
-       y = "Reviews") +
+       y = "Standardized Reviews") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 10),
         axis.title = element_text(size = 12),
         plot.title = element_text(size = 14, face = "bold")) +
   coord_flip()
 ```
-Similar to installs, game category still tend to have more reviews than the other category, with the most number of reviews over $4*10^7$.
+Similar to installs, I standardize the review variable. As shown in the box plot above, game category still tend to have more reviews than the other category, with the most number of reviews over $4*10^7$.
 
-### Step 5: Correlation Analysis(Check if there is multicollinearity)
+### Step 5: Correlation Analysis of Numeric Variables
 ```{r, echo=FALSE}
 numerical_data <- df[, sapply(df, is.numeric)]
 cor_matrix <- cor(numerical_data, use = "complete.obs")
@@ -248,4 +265,127 @@ corrplot(cor_matrix, method = "color", type = "full",
          tl.col = "black", tl.srt = 45, addCoef.col = "black",
          col = colorRampPalette(c("blue", "white", "red"))(200))
 ```
-From the correlation plot, most of the numerical variables do not have strong correlation with each other, except the installs and review. Their correlation is moderate to strong, at 0.65, which means that
+From the correlation plot, most of the numerical variables do not have strong correlation with each other, except the installs and review. Their correlation is 0.63, which means that there is positive relationship between those two variables. When there is more installs for the app, it tends to have more reviews.
+
+### Step 6: Check Association Between Categorical Variables Using Chi-Square Test
+```{r, echo=FALSE, warning=FALSE}
+df$Category <- as.factor(df$Category)
+df$Type <- as.factor(df$Type)
+df$Content.Rating <- as.factor(df$Content.Rating)
+Category_vs_Type <- table(df$Category, df$Type)
+Category_vs_Rating <- table(df$Category, df$Rating)
+Type_vs_Rating <- table(df$Type, df$Rating)
+chi_square_result1 <- chisq.test(Category_vs_Type)
+chi_square_result2 <- chisq.test(Category_vs_Rating)
+chi_square_result3 <- chisq.test(Type_vs_Rating)
+print(chi_square_result1)
+print(chi_square_result2)
+print(chi_square_result3)
+```
+From the chi-square results above, since all the p-value of the tests are less than 0.05, which means that there is association between category and type, category and rating and type and rating pair.
+
+## Model Diagnostics
+### Step 1: Selection of Models
+
+Since the response variable rating is a continuous variable, logistic and multinomial models cannot be used. Also, the response variable is not count data and not discrete, so poisson and negative binomial models cannot be used. Thus, the models that I want to use are linear regression model or linear mixed effect models.
+
+### Step 2: Start from Null Model
+```{r, echo=FALSE}
+model0 <- lm(Rating~1, data = df)
+summary(model0)
+```
+In this null model, the estimate of the intercept is just the overall mean of rating score of all the apps in the whole dataset. Also, the distribution of residuals is not symmetric, suggesting that the model does not fit the data well. Building upon the null model, I will add some variables into the model:
+```{r, echo=FALSE}
+model1 <- lm(Rating~Reviews+Installs+Type+Price, data = df)
+summary(model1)
+plot(model1, which = 1)
+plot(model1, which = 2)
+```
+Based on the model result, variable **Reviews, Type and Price** have p-value less than 0.05, suggesting that they have statistically significant effect on Rating. Additionally, F-test is less than 0.05, suggesting that there is at least one variable that is statistically significant. However, based on the residuals vs fitted value plot, the points are not randomly scattered around 0, indicating that there is heterosedasticity problem. Also, based on the QQ plot, there is heavy-tail problem, indicating that the residuals are not normally distributed. Based on the violations of the two important assumptions of the linear regression models, the model cannot used to fit the dataset, which may explain the low adjusted R-square value.
+
+To tackle this non-normal residual problem, one thing I would like to try is the Robust Regression Model because it allows the residuals to follow t-distribution, which is skewed.
+```{r, echo=FALSE}
+robust_model <- rlm(Rating ~ Reviews + Type + Price, data = df)
+summary(robust_model)
+plot(robust_model, which = 1)
+plot(robust_model, which = 2)
+```
+Although the residual standard error does become smaller, the QQ plot still gets the heavy-tail problem, meaning that the residuals are still not normally distributed. 
+
+### Step 3: Fit the Gamma Regression Model
+
+We can plot the distribution of ratings across all the apps:
+```{r, message=FALSE}
+ggplot(data = df, aes(x=Rating))+
+  geom_histogram() +
+  theme_minimal()
+```
+From the histogram above, since the distribution of Rating is obviously left-skewed, another model I can try is the Gamma Regression Model in GLM:
+```{r, echo=TRUE}
+model_gamma1 <- glm(Rating ~ Reviews + Type + Price, 
+                   family = Gamma(link = "log"), 
+                   data = df)
+summary(model_gamma1)
+```
+Since the residual deviance is close to null deviance, the model did not fit the model well. I would need to add more variables:
+```{r}
+model_gamma2 <- glm(Rating ~ Reviews + Type + Price + Category, 
+                   family = Gamma(link = "log"), 
+                   data = df)
+summary(model_gamma2)
+```
+
+```{r, echo=FALSE}
+model_gamma3 <- glm(Rating ~ Reviews + Type + Price + 
+                     Category + Last.Updated, 
+                   family = Gamma(link = "log"), 
+                   data = df)
+
+null_deviance <- model_gamma3$null.deviance
+print(paste("Null Deviance:", null_deviance))
+
+residual_deviance <- model_gamma3$deviance
+print(paste("Residual Deviance:", residual_deviance))
+
+aic_value <- AIC(model_gamma3)
+print(paste("AIC:", aic_value))
+```
+```{r, echo=FALSE}
+model_gamma4 <- glm(Rating ~ Reviews + Type + Price + 
+                     Category + Android.Ver, 
+                   family = Gamma(link = "log"), 
+                   data = df)
+
+null_deviance <- model_gamma4$null.deviance
+print(paste("Null Deviance:", null_deviance))
+
+residual_deviance <- model_gamma4$deviance
+print(paste("Residual Deviance:", residual_deviance))
+
+aic_value <- AIC(model_gamma4)
+print(paste("AIC:", aic_value))
+```
+```{r, echo=FALSE}
+model_gamma5 <- glm(Rating ~ Reviews + Type + Price + Category + Last.Updated + Android.Ver, 
+                   family = Gamma(link = "log"), 
+                   data = df)
+
+null_deviance <- model_gamma5$null.deviance
+print(paste("Null Deviance:", null_deviance))
+
+residual_deviance <- model_gamma5$deviance
+print(paste("Residual Deviance:", residual_deviance))
+
+aic_value <- AIC(model_gamma5)
+print(paste("AIC:", aic_value))
+```
+Based on the five gamma models fitted above, by comparing their difference between null deviance and residual deviance and AIC value, model_gamma5 should be the best model compared with other four models. It also gets a near 20% decrease from its null deviance to residual deviance.
+
+### Step 4: Fit the Multi-level Model
+
+Based on the model fitting result above, some of the categories of apps are statistically significant, also, in the EDA part, each group's variability in rating score is different. Thus, I could try to treat Category variable as a group variable and fit a GLMM on the data.
+
+
+
+
+
