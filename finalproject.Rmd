@@ -11,6 +11,9 @@ library(dplyr)
 library(ggplot2)
 library(corrplot)
 library(MASS)
+options(max.print = 30)
+library(lme4)
+library(glmmTMB)
 ```
 
 
@@ -379,12 +382,108 @@ print(paste("Residual Deviance:", residual_deviance))
 aic_value <- AIC(model_gamma5)
 print(paste("AIC:", aic_value))
 ```
-Based on the five gamma models fitted above, by comparing their difference between null deviance and residual deviance and AIC value, model_gamma5 should be the best model compared with other four models. It also gets a near 20% decrease from its null deviance to residual deviance.
+Based on the five gamma models fitted above, by comparing their difference between null deviance and residual deviance and AIC value, model_gamma5 should be the best model compared with other four models. Although it gets a higher AIC value, it has a near 20% decrease from its null deviance to residual deviance.
 
 ### Step 4: Fit the Multi-level Model
 
 Based on the model fitting result above, some of the categories of apps are statistically significant, also, in the EDA part, each group's variability in rating score is different. Thus, I could try to treat Category variable as a group variable and fit a GLMM on the data.
 
+Let's start with the no pooling model, which is similar to model 5:
+```{r, echo=FALSE}
+model_nopool <- glm(Rating ~ Reviews + Type + Price + Category - 1, 
+                   family = Gamma(link = "log"), 
+                   data = df)
+
+summary(model_nopool)
+```
+In this no pooling model, each category is treated as a separate variable in the model and has its own coefficients. Also, the residual deviance decreases a lot from null deviance, indicating a better fit.
+
+Now let's fit the partial pooling model:
+```{r, echo=FALSE}
+df$Price <- scale(df$Price)
+model_partialpool <- glmer(Rating ~ Reviews + Type + Price + (1|Category), 
+                   family = Gamma(link = "log"), 
+                   data = df)
+
+summary(model_partialpool)
+```
+Based on the output of the partial pooling model, the variance of app rating score of each Category group is very small compared to overall variance of app rating score across all Category groups, which means that there is already little variability in the mean rating score of each app group, and the random effect of Category groups does not explain much variability in the Rating score.
+
+Another option is to try complete pooling and completely ignore the Category Variable:
+```{r, echo=FALSE}
+model_completepool <- glm(Rating ~ Reviews + Type + Price,
+                   family = Gamma(link = "log"), 
+                   data = df)
+summary(model_completepool)
+```
+In this model, the residual deviance and null deviance are very close, indicating that the model did not fit the data well.
+
+To further compare those three model, MSE could be calculated:
+```{r, echo=FALSE}
+# Compute predictions for each model
+pred_nopool <- predict(model_nopool, type = "response")
+pred_partialpool <- predict(model_partialpool, type = "response")
+pred_completepool <- predict(model_completepool, type = "response")
+
+# Compute residuals
+residuals_nopool <- df$Rating - pred_nopool
+residuals_partialpool <- df$Rating - pred_partialpool
+residuals_completepool <- df$Rating - pred_completepool
+
+# Compute MSE for each model
+mse_nopool <- mean(residuals_nopool^2)
+mse_partialpool <- mean(residuals_partialpool^2)
+mse_completepool <- mean(residuals_completepool^2)
+
+# Print MSE values
+cat("MSE (No Pooling):", mse_nopool, "\n")
+cat("MSE (Partial Pooling):", mse_partialpool, "\n")
+cat("MSE (Complete Pooling):", mse_completepool, "\n")
+
+```
+Based on the MSE calculated, the model with no pooling gets the lowest MSE, which means that it is the best model among the three models.
+
+### Step 5: Compare the No Pooling Model and Model 5
+
+To compare the performance of those two models, we can first
+```{r, echo=FALSE, warning=FALSE}
+aic_model5 <- AIC(model_gamma5)
+aic_nopool <- AIC(model_nopool)
+
+pred_nopool <- predict(model_nopool, type = "response")
+pred_model5 <- predict(model_gamma5, type = "response")
+residuals_nopool <- df$Rating - pred_nopool
+residuals_model5 <- df$Rating - pred_model5
+mse_nopool <- mean(residuals_nopool^2)
+mse_model5 <- mean(residuals_model5^2)
+
+
+cat("AIC (model5):", aic_model5, "\n")
+cat("MSE (model5):", mse_model5, "\n")
+cat("AIC (No Pooling):", aic_nopool, "\n")
+cat("MSE (No Pooling):", mse_nopool, "\n")
+```
+Based on the results above, model5 gets lower MSE value but higher AIC value compared to no pooling model. In order to achieve better accuracy in prediction, I would choose model5 for further analysis.
+
+### Step 6: Add Interaction Term into Model 5
+
+```{r, echo=FALSE}
+summary(model_gamma5)
+```
+Since based on the model output above, reviews, type and price are all statistically significant, I could try adding the interaction term between any of those two:
+```{r, echo=FALSE}
+df$Price <- as.numeric(df$Price)
+model5_interaction <- glm(formula = Rating ~ Reviews * Type + Price + 
+                            Category + Last.Updated + 
+                            Android.Ver, 
+                          family = Gamma(link = "log"), data = df)
+summary(model5_interaction)
+
+coeff_table <- summary(model5_interaction)$coefficients
+coeff_table[grep(":", rownames(coeff_table)), ]
+anova(model5_interaction, model_gamma5, test = "Chisq")
+```
+Based on the model output result and anova test result above, the interaction term is not statistically significant, and adding the interaction term does not improve the model performance based on the p-value in the anova table. Thus, the additional interaction term between Reviews and Type is not needed.
 
 
 
