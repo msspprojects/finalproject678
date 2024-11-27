@@ -23,16 +23,17 @@ df <- read.csv("google_play_store_dataset.csv")
 ```
 # Abstract
 
+The main purpose of this report is about prediction of rating scores of the apps in google play store and find out the important variables that can influence the rating score. The method used are multiple linear regression model and linear mixed effect model. After testing for the model results, the multiple linear regression gets the better performance, and the important variables are number of reviews, price, number of installs, size, category and the time the app was last updated. In the discussion section, the report had a literature review, comparing the approach used in this report with methods used by other researchers. Also, some biases within the dataset used is mentioned in the discussion section.  
+
 # Introduction
 
-Google Play Store has always been the most popular and largest app store for Android phone users across the world. Since it is pre-installed on supporting Android devices, and the operative system holds over 70 percent of the global market, Google Play Store becomes the default app hub for most of the Android users worldwide(). Up until the second quarter of 2024, there are 2.26 million apps available in the store().
+Google Play Store has always been the most popular and largest app store for Android phone users across the world. Since it is pre-installed on supporting Android devices, and the operative system holds over 70 percent of the global market, Google Play Store becomes the default app hub for most of the Android users worldwide. Up until the second quarter of 2024, there are 2.26 million apps available in the store[1].
 
 In this project, the main question of interest is: What are the important factors that can affect the apps ratings? The reasons why I am interested in this question are divided into two part: first of all, since I use Google Play to install apps every day, I am always curious about what kind of apps can have good ratings scores and why some apps I find easy to use get low rating score. Secondly, by doing this analysis, if I want to build apps to publish on Google Play in the future, then I will know which essential factors to focus on or the popular fields to go into.
 
 This project report will be divided into four parts: methods section will talk about model selection and model building; results section will talk about the important findings after fitting the models; discussion section will further analyze those findings and talk about the next steps for the analysis; appendix is the last part, which will include EDA and initial understandings of the data.
 
-# Appendix
-## Data Cleaning
+# Data Cleaning
 ```{r, echo=FALSE}
 glimpse(df)
 ```
@@ -166,8 +167,8 @@ summary(df)
 ```
 After those data cleaning is done, I will start doing EDA.
 
-## EDA
-### Step 1: Bar Plot Counting Distinct Apps in Each Category
+# EDA
+## Step 1: Bar Plot Counting Distinct Apps in Each Category
 ```{r, echo=FALSE}
 category_counts <- df %>%
   group_by(Category) %>%
@@ -184,7 +185,7 @@ ggplot(category_counts, aes(x = reorder(Category, -App_Count), y = App_Count)) +
 ```
 From the count of distinct apps, it is clear that category family gets the most number of apps, with more than 1500 apps in the category. The second most category is game, which is only half the number of the family category, and the third most is the tools category. The category with the least number of distinct apps is comics, with only less than 250 apps.
 
-### Step 2: Box Plot of Distribution of Rating Scores for Each Category
+## Step 2: Box Plot of Distribution of Rating Scores for Each Category
 ```{r, echo=FALSE}
 ggplot(df, aes(x = reorder(Category, Rating, FUN = median), y = Rating)) +
   geom_boxplot(fill = "steelblue", color = "black", outlier.color = "red", outlier.size = 2) +
@@ -210,7 +211,7 @@ rating_dist <- df %>%
 ```
 From the box plot for each category above, it is clear that almost all the categories have median value greater than 4. Also, maybe due to less number of apps in comics category, it is the only category without outliers. What's more, the last four categories at bottom: Tools, Maps and Navigation, Entertainment and Dating tend to have lower median values compared to other groups, which may reflect the user dissatisfaction for those app groups.
 
-### Step 3: Table and Box Plot of Distribution of Number of Installs in Each Category
+## Step 3: Table and Box Plot of Distribution of Number of Installs in Each Category
 ```{r, echo=FALSE}
 install_dist <- df %>%
   group_by(Category) %>%
@@ -223,8 +224,8 @@ install_dist <- df %>%
   arrange(desc(count))
 
 print(install_dist)
-df <- df %>%
-  mutate(Installs = as.numeric(scale(Installs)))
+#df <- df %>%
+  #mutate(Installs = as.numeric(scale(Installs)))
 
 
 ggplot(df, aes(x = reorder(Category, Installs, FUN = median), y = Installs)) +
@@ -240,10 +241,10 @@ ggplot(df, aes(x = reorder(Category, Installs, FUN = median), y = Installs)) +
 ```
 The table is based on original values of installs, and to make every numeric on a similar scale, I try to standardize the install variable, and the box plot is based on standardized install values. From this boxplot above, in general, games tend to have the more number of installs, and the range of app installs in the game category also tend to be greater than other categories. However, there is one outlier in personalization category, which has over $1.5*10^9$ installs.
 
-### Step 4: Distribution of Reviews in Each Category
+## Step 4: Distribution of Reviews in Each Category
 ```{r, echo=FALSE}
-df <- df %>%
-  mutate(Reviews = as.numeric(scale(Reviews)))
+#df <- df %>%
+  #mutate(Reviews = as.numeric(scale(Reviews)))
 
 ggplot(df, aes(x = reorder(Category, Reviews, FUN = median), y = Reviews)) +
   geom_boxplot(fill = "steelblue", color = "black", outlier.color = "red", outlier.size = 2) +
@@ -258,7 +259,7 @@ ggplot(df, aes(x = reorder(Category, Reviews, FUN = median), y = Reviews)) +
 ```
 Similar to installs, I standardize the review variable. As shown in the box plot above, game category still tend to have more reviews than the other category, with the most number of reviews over $4*10^7$.
 
-### Step 5: Correlation Analysis of Numeric Variables
+## Step 5: Correlation Analysis of Numeric Variables
 ```{r, echo=FALSE}
 numerical_data <- df[, sapply(df, is.numeric)]
 cor_matrix <- cor(numerical_data, use = "complete.obs")
@@ -270,153 +271,169 @@ corrplot(cor_matrix, method = "color", type = "full",
 ```
 From the correlation plot, most of the numerical variables do not have strong correlation with each other, except the installs and review. Their correlation is 0.63, which means that there is positive relationship between those two variables. When there is more installs for the app, it tends to have more reviews.
 
-### Step 6: Check Association Between Categorical Variables Using Chi-Square Test
+## Step 6: Check Association Between Categorical Variables Using Chi-Square Test
 ```{r, echo=FALSE, warning=FALSE}
 df$Category <- as.factor(df$Category)
 df$Type <- as.factor(df$Type)
 df$Content.Rating <- as.factor(df$Content.Rating)
 Category_vs_Type <- table(df$Category, df$Type)
-Category_vs_Rating <- table(df$Category, df$Rating)
-Type_vs_Rating <- table(df$Type, df$Rating)
+Category_vs_ContentRating <- table(df$Category, df$Content.Rating)
+Type_vs_ContentRating <- table(df$Type, df$Content.Rating)
 chi_square_result1 <- chisq.test(Category_vs_Type)
-chi_square_result2 <- chisq.test(Category_vs_Rating)
-chi_square_result3 <- chisq.test(Type_vs_Rating)
+chi_square_result2 <- chisq.test(Category_vs_ContentRating)
+chi_square_result3 <- chisq.test(Type_vs_ContentRating)
 print(chi_square_result1)
 print(chi_square_result2)
 print(chi_square_result3)
 ```
-From the chi-square results above, since all the p-value of the tests are less than 0.05, which means that there is association between category and type, category and rating and type and rating pair.
+From the chi-square results above, since all the p-value of the tests are less than 0.05, which means that there is association between category and type, category and content rating and type and content rating.
 
-## Model Diagnostics
-### Step 1: Selection of Models
+# Method
+## Step 1: Selection of Models
 
 Since the response variable rating is a continuous variable, logistic and multinomial models cannot be used. Also, the response variable is not count data and not discrete, so poisson and negative binomial models cannot be used. Thus, the models that I want to use are linear regression model or linear mixed effect models.
 
-### Step 2: Start from Null Model
+First plot the distribution of rating score:
+```{r, message=FALSE}
+ggplot(data = df, aes(x=Rating))+
+  geom_histogram() +
+  theme_minimal()
+```
+Since the rating score is left-skewed, I want to do some transformation to make it more symmetric. The method I would like to use is power transformation.
+```{r, echo=FALSE}
+df$Rating <- df$Rating^4
+ggplot(data = df, aes(x=Rating))+
+  geom_histogram(binwidth = 50) +
+  theme_minimal()
+```
+After taking rating to the power of 4, the distribution of rating score becomes normal. So in the later report, when I refer to the variable rating, it refers to $rating^4$.
+
+## Step 2: Start from Null Model
 ```{r, echo=FALSE}
 model0 <- lm(Rating~1, data = df)
 summary(model0)
 ```
-In this null model, the estimate of the intercept is just the overall mean of rating score of all the apps in the whole dataset. Also, the distribution of residuals is not symmetric, suggesting that the model does not fit the data well. Building upon the null model, I will add some variables into the model:
+In this null model, the estimate of the intercept is just the overall mean of rating score of all the apps in the whole dataset. 
+
+## Step 3: Building the Linear Regression Model and Transformation of Data
+
+Building upon the null model, I will add some variables into the model:
 ```{r, echo=FALSE}
 model1 <- lm(Rating~Reviews+Installs+Type+Price, data = df)
 summary(model1)
 plot(model1, which = 1)
 plot(model1, which = 2)
 ```
-Based on the model result, variable **Reviews, Type and Price** have p-value less than 0.05, suggesting that they have statistically significant effect on Rating. Additionally, F-test is less than 0.05, suggesting that there is at least one variable that is statistically significant. However, based on the residuals vs fitted value plot, the points are not randomly scattered around 0, indicating that there is heterosedasticity problem. Also, based on the QQ plot, there is heavy-tail problem, indicating that the residuals are not normally distributed. Based on the violations of the two important assumptions of the linear regression models, the model cannot used to fit the dataset, which may explain the low adjusted R-square value.
+Based on the model result, variable **Reviews, Type and Price** have p-value less than 0.05, suggesting that they have statistically significant effect on Rating. Additionally, F-test is less than 0.05, suggesting that there is at least one variable that is statistically significant. However, based on the residuals vs fitted value plot, the points are not randomly scattered around 0, indicating that there is heteroscedasticity problem. Based on the QQ plot, there are some points that deviate from the line, but overall, the normality assumption is not violated. Since the homoscedasticity assumptions of the linear regression models is violated, the model cannot used to fit the dataset, which may explain the low adjusted R-square value.
 
-To tackle this non-normal residual problem, one thing I would like to try is the Robust Regression Model because it allows the residuals to follow t-distribution, which is skewed.
+To tackle this heteroscedasticity problem, one thing I would like to try is doing log transformation on the predictor variable because based on the residual vs fitted plot, the fitted value is concentrated in a narrow range, and this could be related to the high-skewness or low variability in one of the predictor variables:
 ```{r, echo=FALSE}
-robust_model <- rlm(Rating ~ Reviews + Type + Price, data = df)
-summary(robust_model)
-plot(robust_model, which = 1)
-plot(robust_model, which = 2)
+hist(df$Reviews)
+hist(df$Price)
+hist(df$Installs)
 ```
-Although the residual standard error does become smaller, the QQ plot still gets the heavy-tail problem, meaning that the residuals are still not normally distributed. 
-
-### Step 3: Fit the Gamma Regression Model
-
-We can plot the distribution of ratings across all the apps:
-```{r, message=FALSE}
-ggplot(data = df, aes(x=Rating))+
-  geom_histogram() +
-  theme_minimal()
+Based on the histograms above, those three numeric variables are all highly skewed, so I could do log transformation on those three variables.
+```{r, echo=FALSE}
+model2 <- lm(Rating~log(Reviews+1)+log(Installs+1)+Type+log(Price+1), data = df)
+summary(model2)
+plot(model2, which = 1)
+plot(model2, which = 2)
 ```
-From the histogram above, since the distribution of Rating is obviously left-skewed, another model I can try is the Gamma Regression Model in GLM:
+After doing the log transformation on predictors, in the residual vs fitted plot, the residuals become more spread around 0, indicating the homoscedasticity assumption is no longer violated, and the QQ plot has less heavy-tail problem, indicating the normality of residual distribution. What's more, the adjust r-squared value is ten times the original model, and the residual standard error also decreased, meaning that model 2 is a better model than model 1. I could add more variables into the model and see if it improves the model, since type is not a statistically significant variable in the model, I will remove it in the later model:
 ```{r, echo=TRUE}
-model_gamma1 <- glm(Rating ~ Reviews + Type + Price, 
-                   family = Gamma(link = "log"), 
-                   data = df)
-summary(model_gamma1)
+model3 <- lm(Rating~log(Reviews+1)+log(Installs+1)+Type+
+               log(Price+1)+Category, data = df)
+summary(model3)
 ```
-Since the residual deviance is close to null deviance, the model did not fit the model well. I would need to add more variables:
-```{r}
-model_gamma2 <- glm(Rating ~ Reviews + Type + Price + Category, 
-                   family = Gamma(link = "log"), 
-                   data = df)
-summary(model_gamma2)
+In model 3, residual standard error decreased and adjusted R-square increased, meaning that adding category variable increase the model performance. Let's try adding two more categorical variables:
+```{r, echo=FALSE}
+model4 <- lm(Rating~log(Reviews+1)+log(Installs+1)+Type+
+               log(Price+1)+Category+Content.Rating+Last.Updated, 
+             data = df)
+summary(model4)
 ```
+Based on the model4 output result, the residual standard error and adjusted r-squared all get further improvement.
 
 ```{r, echo=FALSE}
-model_gamma3 <- glm(Rating ~ Reviews + Type + Price + 
-                     Category + Last.Updated, 
-                   family = Gamma(link = "log"), 
-                   data = df)
+model5 <- lm(Rating~log(Reviews+1)+log(Installs+1)+Type+
+               log(Price+1)+`Size(in MB)`+
+               Category+Content.Rating+Last.Updated, 
+             data = df)
+summary(model5)
+```
+After getting those five models with only fixed effects, I can use MSE to determine which model is the best model and compare it with the null model:
+```{r, echo=FALSE}
+# Compute predictions for each model
+pred_0 <- predict(model0, type = "response")
+pred_1 <- predict(model1, type = "response")
+pred_2 <- predict(model2, type = "response")
+pred_3 <- predict(model3, type = "response")
+pred_4 <- predict(model4, type = "response")
+pred_5 <- predict(model5, type = "response")
 
-null_deviance <- model_gamma3$null.deviance
-print(paste("Null Deviance:", null_deviance))
+# Compute residuals
+residuals_0 <- df$Rating - pred_0
+residuals_1 <- df$Rating - pred_1
+residuals_2 <- df$Rating - pred_2
+residuals_3 <- df$Rating - pred_3
+residuals_4 <- df$Rating - pred_4
+residuals_5 <- df$Rating - pred_5
 
-residual_deviance <- model_gamma3$deviance
-print(paste("Residual Deviance:", residual_deviance))
+# Compute MSE for each model
+mse_0 <- mean(residuals_0^2)
+mse_1 <- mean(residuals_1^2)
+mse_2 <- mean(residuals_2^2)
+mse_3 <- mean(residuals_3^2)
+mse_4 <- mean(residuals_4^2)
+mse_5 <- mean(residuals_5^2)
 
-aic_value <- AIC(model_gamma3)
-print(paste("AIC:", aic_value))
+# Print MSE values
+cat("MSE for Null Model:", mse_0, "\n")
+cat("MSE for Model 1:", mse_1, "\n")
+cat("MSE for Model 2:", mse_2, "\n")
+cat("MSE for Model 3:", mse_3, "\n")
+cat("MSE for Model 4:", mse_4, "\n")
+cat("MSE for Model 5:", mse_5, "\n")
 ```
 ```{r, echo=FALSE}
-model_gamma4 <- glm(Rating ~ Reviews + Type + Price + 
-                     Category + Android.Ver, 
-                   family = Gamma(link = "log"), 
-                   data = df)
-
-null_deviance <- model_gamma4$null.deviance
-print(paste("Null Deviance:", null_deviance))
-
-residual_deviance <- model_gamma4$deviance
-print(paste("Residual Deviance:", residual_deviance))
-
-aic_value <- AIC(model_gamma4)
-print(paste("AIC:", aic_value))
+anova(model0, model5, test = "Chisq")
 ```
-```{r, echo=FALSE}
-model_gamma5 <- glm(Rating ~ Reviews + Type + Price + Category + Last.Updated + Android.Ver, 
-                   family = Gamma(link = "log"), 
-                   data = df)
+By comparing their MSE and chi-square test between model 5 and null model, model 5 is the best model, which has the lowest MSE, residual standard error and highest adjusted R-squared.
 
-null_deviance <- model_gamma5$null.deviance
-print(paste("Null Deviance:", null_deviance))
+## Step 4: Fit the Multi-level Model
 
-residual_deviance <- model_gamma5$deviance
-print(paste("Residual Deviance:", residual_deviance))
-
-aic_value <- AIC(model_gamma5)
-print(paste("AIC:", aic_value))
-```
-Based on the five gamma models fitted above, by comparing their difference between null deviance and residual deviance and AIC value, model_gamma5 should be the best model compared with other four models. Although it gets a higher AIC value, it has a near 20% decrease from its null deviance to residual deviance.
-
-### Step 4: Fit the Multi-level Model
-
-Based on the model fitting result above, some of the categories of apps are statistically significant, also, in the EDA part, each group's variability in rating score is different. Thus, I could try to treat Category variable as a group variable and fit a GLMM on the data.
+Based on the model fitting result above, some of the categories of apps are statistically significant, also, in the EDA part, each group's variability in rating score is different. Thus, I could try to treat Category variable as a group variable and fit a LMM on the data.
 
 Let's start with the no pooling model, which is similar to model 5:
 ```{r, echo=FALSE}
-model_nopool <- glm(Rating ~ Reviews + Type + Price + Category - 1, 
-                   family = Gamma(link = "log"), 
-                   data = df)
-
+model_nopool <- lm(Rating~log(Reviews+1)+log(Installs+1)+Type+
+               log(Price+1)+`Size(in MB)`+
+               Category+Content.Rating+Last.Updated-1, 
+             data = df)
 summary(model_nopool)
 ```
-In this no pooling model, each category is treated as a separate variable in the model and has its own coefficients. Also, the residual deviance decreases a lot from null deviance, indicating a better fit.
+In this no pooling model, each category is treated as a separate variable in the model and has its own coefficients. Also, the adjusted R-squared increased a lot compared to model 5, indicating a better fit.
 
 Now let's fit the partial pooling model:
 ```{r, echo=FALSE}
-df$Price <- scale(df$Price)
-model_partialpool <- glmer(Rating ~ Reviews + Type + Price + (1|Category), 
-                   family = Gamma(link = "log"), 
+model_partialpool <- lmer(Rating~log(Reviews+1)+log(Installs+1)+Type+
+               log(Price+1)+`Size(in MB)`+Content.Rating+Last.Updated+
+                 (1|Category), 
                    data = df)
 
 summary(model_partialpool)
 ```
-Based on the output of the partial pooling model, the variance of app rating score of each Category group is very small compared to overall variance of app rating score across all Category groups, which means that there is already little variability in the mean rating score of each app group, and the random effect of Category groups does not explain much variability in the Rating score.
+Based on the output of the partial pooling model, the variance of app rating score of each Category group is very small compared to overall variance of app rating score across all Category groups. Also, compared with no pooling model, the residual standard deviation is similar compared with no pooling model, indicating that the mixed effect may not be necessary.
 
 Another option is to try complete pooling and completely ignore the Category Variable:
 ```{r, echo=FALSE}
-model_completepool <- glm(Rating ~ Reviews + Type + Price,
-                   family = Gamma(link = "log"), 
+model_completepool <- lm(Rating~log(Reviews+1)+log(Installs+1)+Type+
+               log(Price+1)+`Size(in MB)`+Content.Rating+Last.Updated, 
                    data = df)
+
 summary(model_completepool)
 ```
-In this model, the residual deviance and null deviance are very close, indicating that the model did not fit the data well.
+In this model, compared with previous two models, the residual standard error increased, and its adjusted R-squared is lower than the no pooling model, indicating that the model may be worse than the previous two.
 
 To further compare those three model, MSE could be calculated:
 ```{r, echo=FALSE}
@@ -443,15 +460,15 @@ cat("MSE (Complete Pooling):", mse_completepool, "\n")
 ```
 Based on the MSE calculated, the model with no pooling gets the lowest MSE, which means that it is the best model among the three models.
 
-### Step 5: Compare the No Pooling Model and Model 5
+## Step 5: Compare the No Pooling Model and Model 5
 
 To compare the performance of those two models, we can first
 ```{r, echo=FALSE, warning=FALSE}
-aic_model5 <- AIC(model_gamma5)
+aic_model5 <- AIC(model5)
 aic_nopool <- AIC(model_nopool)
 
 pred_nopool <- predict(model_nopool, type = "response")
-pred_model5 <- predict(model_gamma5, type = "response")
+pred_model5 <- predict(model5, type = "response")
 residuals_nopool <- df$Rating - pred_nopool
 residuals_model5 <- df$Rating - pred_model5
 mse_nopool <- mean(residuals_nopool^2)
@@ -463,27 +480,78 @@ cat("MSE (model5):", mse_model5, "\n")
 cat("AIC (No Pooling):", aic_nopool, "\n")
 cat("MSE (No Pooling):", mse_nopool, "\n")
 ```
-Based on the results above, model5 gets lower MSE value but higher AIC value compared to no pooling model. In order to achieve better accuracy in prediction, I would choose model5 for further analysis.
+Based on the results above, no pooling model gets very similar result with model 5 for both AIC and MSE because no pooling model is just model 5 removing the intercept term. For easier model interpretation, I would choose model 5 for further analysis, but with high AIC value and lower MSE value, this could indicate the overfitting problem with model 5, but with the knowledge in MA678, I don't have a way to verify this.
 
-### Step 6: Add Interaction Term into Model 5
+## Step 6: Add Interaction Term into No Pooling Model
 
+Since based on the model 5 output, type and size are statistically significant, I could try adding the interaction term between these two:
 ```{r, echo=FALSE}
-summary(model_gamma5)
-```
-Since based on the model output above, reviews, type and price are all statistically significant, I could try adding the interaction term between any of those two:
-```{r, echo=FALSE}
-df$Price <- as.numeric(df$Price)
-model5_interaction <- glm(formula = Rating ~ Reviews * Type + Price + 
-                            Category + Last.Updated + 
-                            Android.Ver, 
-                          family = Gamma(link = "log"), data = df)
+model5_interaction <- lm(Rating~log(Reviews+1)+log(Installs+1)+
+               log(Price+1)+`Size(in MB)`*Type+
+               Category+Content.Rating+Last.Updated, 
+             data = df)
+
 summary(model5_interaction)
 
 coeff_table <- summary(model5_interaction)$coefficients
 coeff_table[grep(":", rownames(coeff_table)), ]
-anova(model5_interaction, model_gamma5, test = "Chisq")
+anova(model5_interaction, model5, test = "Chisq")
 ```
-Based on the model output result and anova test result above, the interaction term is not statistically significant, and adding the interaction term does not improve the model performance based on the p-value in the anova table. Thus, the additional interaction term between Reviews and Type is not needed.
+Based on the model output result and anova table result above, although the interaction term is statistically significant, and adding the interaction term does improve the model's adjusted R-square a little bit, the chi-square test still show that model 2, which is the model without interaction term, is better. Thus, the additional interaction term between Size and Type is not needed.
+
+## Step 7: Interpretation of Model 5 Selected
+
+Now, after choosing the best model, I will try to interpret this model:
+```{r, echo=FALSE}
+summary(model5)
+coeff_table_model5 <- summary(model5)$coefficients
+```
+Based on the model output, the residual's median is 0, and min, max, first quantile and third quantile are all close to each other, meaning that the residual's distribution is symmetric.
+
+To interpret the coefficient, since there are many variables, especially in category, content rating and last updated, I will only select one of the level from each variable to interpret.
+
+For the coefficient of reviews, one unit increase in $log(Reviews + 1)$, the ratings(which is the 4th power of original rating score) is expected to increase by 31.184, keeping all other variables constant. This shows the positive correlation between reviews and rating score.
+
+For the coefficient of installs, one unit increase in $log(Installs + 1)$, the ratings is expected to decrease by 30.14, keeping all other variables constant. This shows the negative correlation between installs and rating score.
+
+The interpretation of coefficient of price and size are similar to previous ones, and they both have negative correlation with the rating scores.
+
+For coefficient of Type, the average rating score for paid app is 21.32 higher compared to free app, keeping all other variables constant.
+
+For category level auto and vehicles, the coefficient is -58.2, which shows that the average rating score for apps belonging to auto and vehicles group is 58.2 lower compared to the apps in arts and design group(reference group), keeping all other variables constant.
+
+For content rating level everyone, the coefficient is -42.12, which shows that the average rating score for apps with content rating as everyone is 42.12 lower compared to the apps with content rating as Adults(reference group), keeping all other variables constant.
+
+For the last updated date April 1st, 2017, the coefficient is 54.42, which shows that the average rating score for apps that last updated at April 1st, 2017 is 54.42 higher compared to the apps last updated at April 1st 2016(reference group), keeping all other variables constant.
+
+The residual standard error is 112.8, which is the lowest compared to other models that I fit. The adjust R-square is 0.1492, which indicated that the model can only explain 14.92% variability in the response variable, and although this is the best model I get, the model still does not fit the data well. The F-statistic has p-value less than 0.05, showing that there is at least one variable that is statistically significant, and the model is better than the null model.
+
+The important predictors of rating score according to my model are reviews, installs, type, price, size, category and last updated date.
+
+# Discussion
+
+To validate the result of my model, I try to find three research paper that related to rating score prediction in Google Play Store. 
+
+Based on the paper by S Shashank et.al[2], they tried to predict the rating score using machine learning algorithm. The paper used the same dataset as I do in this report. Compared to my approach, the author do a more detailed EDA. Instead of focusing on the category of apps, they pay more attention on whether the app is free or paid and find out the difference in rating score between free app group and paid app group. In the method part, the authors applied five techniques trying to find the important variables related to rating score: random forest, support vector regression, linear regression, k-nearest neighbors and k-means clustering. As a results, the k-means neighbors achieves the best result, which 92% prediction accuracy, and the author concludes that **size, type, price, content rating and genre** are variables strongly correlated with the rating score. The author's result is consistent with my result, and those are also statistically significant variables in my linear regression model, except I used category instead of genre. However, after reading the paper, I find out there could be bias related to the rating score because higher ratings given by users potentially attract several new users disproportionately, and people tend to only use apps with high rating score, leading to more reviews of the app. Additionally, many people don't like writing reviews for the apps no matter they like the app or not, there are also people writing negative reviews but give very positive rating scores, so for some apps, the rating score may not reflect their true quality. 
+
+Another research paper I found was written by Min-Kyo Seo et.al[3]. The main purpose of this paper is to investigate the predictors and main determinants of consumers’ ratings of mobile applications in the Google Play Store. The author also tried to extend their model into a sentimental analysis and aim to review polarity and subjectivity on the application rating. In the data preprocessing part, they used sentiment analysis based on the users reviews from Google Play Store and created new variables polarity and subjectivity and merge them into the original Google Play dataset. In the method part, there were four models they used: multiple linear regression, regression tree, random forest tree and neural network. Based on the model result, neural network model gives the lowest RMSE result, and the important variables are **price, installs and reviews**, and polarity and subjectivity of reviews are less critical. Those variables are also included in my model, one difference is that install is positively correlated with ratings based on the author's results, but install is negative correlated with rating score based on my model's results.
+
+The last research paper I found is by Jayanth. P et.al[4], and the main purpose of research paper is to predict the rating score using the comprehensive Google Play Store dataset similar to the one that I used. The method that the author used are: lasso regression model, ridge regression model, gradient boosting, XGBoost and CATBoost. Based on the result, CATBoost method provides the lowest MAE, MSE, RMSE and highest $R^2$ value, but the top features that the author find that can influence the rating score is different from my results, the author find that **reviews, last updated and android version** are the most critical variables. In my models, android version is not included, and most of the levels of last updated are not statistically significant.
+
+Based on the literature review above, the next step for my analysis could be try to implement tree model or deep learning model to further improve my current linear regression model.
+
+# Appendix
+## Reference
+
+[1] Statista (2024) Google Play Store - Statistics & Facts. Available at: https://www.statista.com/topics/9929/google-play-store/#topicOverview (Accessed: 27 November 2024).
+
+[2] S Shashank and Brahma Naidu, "Google play store apps-data analysis and ratings prediction", International Research Journal of Engineering and Technology, vol. 7.12, pp. 265-274, 2020.
+
+[3] Seo, M.K., Yang, O.S. and Yang, Y.H., 2020. Global Big Data Analysis Exploring the Determinants of Application Ratings: Evidence from the Google Play Store. Journal of Korea Trade, 24(7), pp.1-28.
+
+[4] J. P, A. Nagam, P. Undavalli, P. P, V. P. K. S and V. K. K. K, "Leveraging CAT Boost for Enhanced Prediction of App Ratings in the Google Play Store," 2024 Second International Conference on Advances in Information Technology (ICAIT), Chikkamagaluru, Karnataka, India, 2024, pp. 1-6, doi: 10.1109/ICAIT61638.2024.10690600.
+
+
 
 
 
