@@ -34,7 +34,7 @@ Google Play Store has always been the most popular and largest app store for And
 
 In this project, the main question of interest is: What are the important factors that can affect the apps ratings? The reasons why I am interested in this question are divided into two part: first of all, since I use Google Play to install apps every day, I am always curious about what kind of apps can have good ratings scores and why some apps I find easy to use get low rating score. Secondly, by doing this analysis, if I want to build apps to publish on Google Play in the future, then I will know which essential factors to focus on or the popular fields to go into.
 
-This project report will be divided into four parts: methods section will talk about model selection and model building; results section will talk about the important findings after fitting the models; discussion section will further analyze those findings and talk about the next steps for the analysis; appendix is the last part, which will include EDA and initial understandings of the data.
+This project report will be divided into four parts: data cleaning section will talk about data cleaning process; EDA section will include the graph of variables of interest and initial understanding of the data; methods section will talk about model selection, model building and model output results; discussion section will further analyze those findings and talk about the next steps for the analysis; appendix is the last part, which will raw R model output and references.
 
 # Data Cleaning
 ```{r, echo=FALSE}
@@ -261,7 +261,7 @@ top_category %>%
   row_spec(0, bold = TRUE, color = "white", background = "#007bff")
 ```
 
-The table is based on original values of installs, and to make every numeric on a similar scale, I try to standardize the install variable, and the box plot is based on standardized install values. From this boxplot above, in general, games tend to have the more number of installs, and the range of app installs in the game category also tend to be greater than other categories. However, there is one outlier in personalization category, which has over $1.5*10^9$ installs.
+From this boxplot above, in general, games tend to have the more number of installs, and the range of app installs in the game category also tend to be greater than other categories. However, there is one outlier in personalization category, which has the most number of installs across all categories.
 
 ## Step 4: Distribution of Reviews in Each Category
 ```{r, echo=FALSE, fig.width=6, fig.height=4, fig.align='center'}
@@ -276,7 +276,7 @@ ggplot(df, aes(x = reorder(Category, Reviews, FUN = median), y = Reviews)) +
         plot.title = element_text(size = 14, face = "bold")) +
   coord_flip()
 ```
-Similar to installs, I standardize the review variable. As shown in the box plot above, game category still tend to have more reviews than the other category, with the most number of reviews over $4*10^7$.
+As shown in the box plot above, game category still tend to have more reviews than the other category, with the most number of reviews over $4*10^7$.
 
 ## Step 5: Correlation Analysis of Numeric Variables
 ```{r, echo=FALSE, fig.width=6, fig.height=4, fig.align='center'}
@@ -288,7 +288,7 @@ corrplot(cor_matrix, method = "color", type = "full",
          tl.col = "black", tl.srt = 45, addCoef.col = "black",
          col = colorRampPalette(c("blue", "white", "red"))(200))
 ```
-From the correlation plot, most of the numerical variables do not have strong correlation with each other, except the installs and review. Their correlation is 0.63, which means that there is positive relationship between those two variables. When there is more installs for the app, it tends to have more reviews.
+From the correlation plot, most of the numerical variables do not have strong correlation with each other, except the installs and review. Their correlation is 0.64, which means that there is positive relationship between those two variables. When there is more installs for the app, it tends to have more reviews.
 
 ## Step 6: Check Association Between Categorical Variables Using Chi-Square Test
 ```{r, echo=FALSE, warning=FALSE}
@@ -329,11 +329,11 @@ After taking rating to the power of 4, the distribution of rating score becomes 
 
 ## Step 2: Start from Null Model
 
-The formula of null model is:
+The formula of **null model** is:
 
-\begin{align*}
-Rating = \beta_0
-\end{align*}
+\begin{align}
+Rating = \beta_0 \tag{0}
+\end{align}
 
 ```{r, echo=FALSE}
 model0 <- lm(Rating~1, data = df)
@@ -347,11 +347,11 @@ In this null model, the estimate of the intercept is just the overall mean of ra
 
 Building upon the null model, I will add some variables into the model:
 
-The formula of model 1 is:
+The formula of **model 1** is:
 
-\begin{align*}
-Rating = \beta_0 + \beta_1 \cdot Reviews+\beta_2 \cdot Installs+\beta_3 \cdot TypePaid+\beta_4 \cdot Price
-\end{align*}
+\begin{align}
+Rating = \beta_0 + \beta_1 \cdot Reviews+\beta_2 \cdot Installs+\beta_3 \cdot TypePaid+\beta_4 \cdot Price \tag{1}
+\end{align}
 
 ```{r, echo=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 model1 <- lm(Rating~Reviews+Installs+Type+Price, data = df)
@@ -374,11 +374,13 @@ hist(df$Installs, main = "Installs", col = "pink", xlab = "Installs")
 par(mfrow = c(1, 1))
 ```
 Based on the histograms above, those three numeric variables are all highly skewed, so I could do log transformation on those three variables.
-Here is the formula for the model, model output in Model 2 section in Appendix, the reason to add 1 in log is to avoid some zero value for those variables because log is not defined at 0:
 
-\begin{align*}
-Rating = \beta_0 + \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+\\\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)
-\end{align*}
+Here is the formula for the **model 2**, model output in Model 2 section in Appendix, the reason to add 1 in log is to avoid some zero value for those variables because log is not defined at 0:
+
+\begin{align}
+Rating &= \beta_0 + \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+ \nonumber \\
+&\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1) \tag{2}
+\end{align}
 
 ```{r, echo=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 model2 <- lm(Rating~log(Reviews+1)+log(Installs+1)+Type+log(Price+1), data = df)
@@ -387,13 +389,13 @@ plot(model2, which = 2)
 ```
 After doing the log transformation on predictors, in the residual vs fitted plot, the residuals become more spread around 0, indicating the homoscedasticity assumption is no longer violated, and the QQ plot has less heavy-tail problem, indicating the normality of residual distribution. What's more, the adjust r-squared value is ten times the original model, and the residual standard error also decreased, meaning that model 2 is a better model than model 1. I could add more variables into the model and see if it improves the model.
 
-Here is the formula for model 3, model output is in the Model 3 section in Appendix:
+Here is the formula for **model 3**, model output is in the Model 3 section in Appendix:
 
-\begin{align*}
-Rating = \beta_0 + \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+\\
-\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+\\
-\beta_5 \cdot Category
-\end{align*}
+\begin{align}
+Rating &= \beta_0 + \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+ \nonumber \\
+&\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+ \nonumber \\
+&\beta_5 \cdot Category \tag{3}
+\end{align}
 
 ```{r, echo=FALSE}
 model3 <- lm(Rating~log(Reviews+1)+log(Installs+1)+Type+
@@ -403,14 +405,14 @@ In the formula above, because there are too many levels in Category variable, it
 
 In model 3, residual standard error decreased and adjusted R-square increased, meaning that adding category variable increase the model performance. Let's try adding two more categorical variables.
 
-Here is the formula for model 4, model output is in the Model 4 section in Appendix:
+Here is the formula for **model 4**, model output is in the Model 4 section in Appendix:
 
-\begin{align*}
-Rating = \beta_0 + \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+\\
-\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+\\
-\beta_5 \cdot Category+\beta_6 \cdot Content.Rating+\\
-\beta_7 \cdot Last.Updated
-\end{align*}
+\begin{align}
+Rating &= \beta_0 + \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+ \nonumber \\
+&\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+ \nonumber \\
+&\beta_5 \cdot Category+\beta_6 \cdot Content.Rating+ \nonumber \\
+&\beta_7 \cdot Last.Updated \tag{4}
+\end{align}
 
 ```{r, echo=FALSE}
 model4 <- lm(Rating~log(Reviews+1)+log(Installs+1)+Type+
@@ -421,11 +423,14 @@ Similar to model 3, in the actual model, each level of categorical variable get 
 
 Based on the model4 output result, the residual standard error and adjusted r-squared all get further improvement.
 
-Here is the formula for model 5, model output is in the Model 5 section in Appendix:
+Here is the formula for **model 5**, model output is in the Model 5 section in Appendix:
 
-\begin{align*}
-Rating = \beta_0 + \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+\\\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+\\\beta_5 \cdot Category+\beta_6 \cdot Content.Rating+\\\beta_7 \cdot Last.Updated+\beta_8 \cdot Size
-\end{align*}
+\begin{align}
+Rating &= \beta_0 + \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+ \nonumber \\
+&\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+ \nonumber \\
+&\beta_5 \cdot Category+\beta_6 \cdot Content.Rating+ \nonumber \\
+&\beta_7 \cdot Last.Updated+\beta_8 \cdot Size \tag{5}
+\end{align}
 
 ```{r, echo=FALSE}
 model5 <- lm(Rating~log(Reviews+1)+log(Installs+1)+Type+
@@ -488,11 +493,14 @@ By comparing their MSE and chi-square test between model 5 and null model, model
 
 Based on the model fitting result above, some of the categories of apps are statistically significant, also, in the EDA part, each group's variability in rating score is different. Thus, I could try to treat Category variable as a group variable and fit a LMM on the data. The model output for all three models can be found in the appendix section.
 
-Let's start with the no pooling model, which is similar to model 5, here is the formula:
+Let's start with the **no pooling model**, which is similar to model 5, here is the formula:
 
-\begin{align*}
-Rating = \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+\\\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+\\\beta_5 \cdot Category+\beta_6 \cdot Content.Rating+\\\beta_7 \cdot Last.Updated+\beta_8 \cdot Size
-\end{align*}
+\begin{align}
+Rating &= \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+ \nonumber \\
+&\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+ \nonumber \\
+&\beta_5 \cdot Category+\beta_6 \cdot Content.Rating+ \nonumber \\
+&\beta_7 \cdot Last.Updated+\beta_8 \cdot Size \tag{6}
+\end{align}
 
 ```{r, echo=FALSE}
 model_nopool <- lm(Rating~log(Reviews+1)+log(Installs+1)+Type+
@@ -500,13 +508,15 @@ model_nopool <- lm(Rating~log(Reviews+1)+log(Installs+1)+Type+
                Category+Content.Rating+Last.Updated-1, 
              data = df)
 ```
-In this no pooling model, each category is treated as a separate variable in the model and has its own coefficients. Also, the adjusted R-squared increased a lot compared to model 5, indicating a better fit(??).
+In this no pooling model, each category is treated as a separate variable in the model and has its own coefficients. Also, the adjusted R-squared increased a lot compared to model 5.
 
-Now let's fit the partial pooling model, here is the formula:
+Now let's fit the **partial pooling model**, here is the formula:
 
-\begin{align*}
-Rating = \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+\\\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+\beta_5 \cdot Content.Rating+\\\beta_6 \cdot Last.Updated+\beta_7 \cdot Size+(1|Category)
-\end{align*}
+\begin{align}
+Rating &= \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+ \nonumber \\
+&\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+\beta_5 \cdot Content.Rating+ \nonumber \\
+&\beta_6 \cdot Last.Updated+\beta_7 \cdot Size+(1|Category) \tag{7}
+\end{align}
 
 ```{r, echo=FALSE}
 model_partialpool <- lmer(Rating~log(Reviews+1)+log(Installs+1)+Type+
@@ -516,11 +526,13 @@ model_partialpool <- lmer(Rating~log(Reviews+1)+log(Installs+1)+Type+
 ```
 Based on the output of the partial pooling model, the variance of app rating score of each Category group is very small compared to overall variance of app rating score across all Category groups. Also, compared with no pooling model, the residual standard deviation is similar compared with no pooling model, indicating that the random effect may not be necessary.
 
-Another option is to try complete pooling and completely ignore the Category Variable, here is the formula:
+Another option is to try **complete pooling** and completely ignore the Category Variable, here is the formula:
 
-\begin{align*}
-Rating = \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+\\\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+\beta_5 \cdot Content.Rating+\\\beta_6 \cdot Last.Updated+\beta_7 \cdot Size
-\end{align*}
+\begin{align}
+Rating &= \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+ \nonumber \\
+&\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+\beta_5 \cdot Content.Rating+ \nonumber \\
+&\beta_6 \cdot Last.Updated+\beta_7 \cdot Size \tag{8}
+\end{align}
 
 ```{r, echo=FALSE}
 model_completepool <- lm(Rating~log(Reviews+1)+log(Installs+1)+Type+
@@ -603,9 +615,11 @@ Based on the results above, no pooling model gets very similar result with model
 
 Since based on the model 5 output, type and size are statistically significant, I could try adding the interaction term between these two, here is the formula for the model, the model output can be found in the appendix section:
 
-\begin{align*}
-Rating = \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+\\\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+\beta_5 \cdot Content.Rating+\\\beta_6 \cdot Last.Updated+\beta_7 \cdot Size+\beta_8 \cdot Category+\beta_9 \cdot Size*Type
-\end{align*}
+\begin{align}
+Rating &= \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+ \nonumber \\
+&\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+\beta_5 \cdot Content.Rating+ \nonumber \\
+&\beta_6 \cdot Last.Updated+\beta_7 \cdot Size+\beta_8 \cdot Category+\beta_9 \cdot Size*Type \tag{9}
+\end{align}
 
 ```{r, echo=FALSE}
 model5_interaction <- lm(Rating~log(Reviews+1)+log(Installs+1)+
@@ -649,7 +663,7 @@ The important predictors of rating score according to my model are reviews, inst
 
 To validate the result of my model, I found three research paper that related to rating score prediction in Google Play Store. 
 
-Based on the paper by S Shashank et.al[2], they tried to predict the rating score using machine learning algorithm. The paper used the same dataset as I do in this report. Compared to my approach, the author do a more detailed EDA. Instead of focusing on the category of apps, they pay more attention on whether the app is free or paid and find out the difference in rating score between free app group and paid app group. In the method part, the authors applied five techniques trying to find the important variables related to rating score: random forest, support vector regression, linear regression, k-nearest neighbors and k-means clustering. As a results, the k-means neighbors achieves the best result, which 92% prediction accuracy, and the author concludes that **size, type, price, content rating and genre** are variables strongly correlated with the rating score. The author's result is consistent with my result, and those are also statistically significant variables in my linear regression model, except I used category instead of genre. However, after reading the paper, I find out there could be bias related to the rating score because higher ratings given by users potentially attract several new users disproportionately, and people tend to only use apps with high rating score, leading to more reviews of the app. Additionally, many people don't like writing reviews for the apps no matter they like the app or not, there are also people writing negative reviews but give very positive rating scores, so for some apps, the rating score may not reflect their true quality. 
+Based on the paper by S Shashank et.al[2], they tried to predict the rating score using machine learning algorithm. The paper used the same dataset as I do in this report. Compared to my approach, the author do a more detailed EDA. Instead of focusing on the category of apps, they pay more attention on whether the app is free or paid and find out the difference in rating score between free app group and paid app group. In the method part, the authors applied five techniques trying to find the important variables related to rating score: random forest, support vector regression, linear regression, k-nearest neighbors and k-means clustering. As a results, the k-means neighbors achieves the best result, which has 92% prediction accuracy, and the author concludes that **size, type, price, content rating and genre** are variables strongly correlated with the rating score. The author's result is consistent with my result, and those are also statistically significant variables in my linear regression model, except I used category instead of genre. However, after reading the paper, I find out there could be bias related to the rating score because higher ratings given by users potentially attract several new users disproportionately, and people tend to only use apps with high rating score, leading to more reviews of the app. Additionally, many people don't like writing reviews for the apps no matter they like the app or not, there are also people writing negative reviews but give very positive rating scores, so for some apps, the rating score may not reflect their true quality. 
 
 Another research paper I found was written by Min-Kyo Seo et.al[3]. The main purpose of this paper is to investigate the predictors and main determinants of consumers’ ratings of mobile applications in the Google Play Store. The author also tried to extend their model into a sentimental analysis and aim to review polarity and subjectivity on the application rating. In the data preprocessing part, they used sentiment analysis based on the users reviews from Google Play Store and created new variables polarity and subjectivity and merge them into the original Google Play dataset. In the method part, there were four models they used: multiple linear regression, regression tree, random forest tree and neural network. Based on the model result, neural network model gives the lowest RMSE result, and the important variables are **price, installs and reviews**, and polarity and subjectivity of reviews are less critical. Those variables are also included in my model, one difference is that install is positively correlated with ratings based on the author's results, but install is negative correlated with rating score based on my model's results.
 
@@ -714,13 +728,15 @@ summary(model5_interaction)
 
 ## Reference
 
-[1] Statista (2024) Google Play Store - Statistics & Facts. Available at: https://www.statista.com/topics/9929/google-play-store/#topicOverview (Accessed: 27 November 2024).
+[1] J. P, A. Nagam, P. Undavalli, P. P, V. P. K. S and V. K. K. K, "Leveraging CAT Boost for Enhanced Prediction of App Ratings in the Google Play Store," 2024 Second International Conference on Advances in Information Technology (ICAIT), Chikkamagaluru, Karnataka, India, 2024, pp. 1-6, doi: 10.1109/ICAIT61638.2024.10690600.
 
-[2] S Shashank and Brahma Naidu, "Google play store apps-data analysis and ratings prediction", International Research Journal of Engineering and Technology, vol. 7.12, pp. 265-274, 2020.
+[2] Statista (2024) Google Play Store - Statistics & Facts. Available at: https://www.statista.com/topics/9929/google-play-store/#topicOverview (Accessed: 27 November 2024).
 
-[3] Seo, M.K., Yang, O.S. and Yang, Y.H., 2020. Global Big Data Analysis Exploring the Determinants of Application Ratings: Evidence from the Google Play Store. Journal of Korea Trade, 24(7), pp.1-28.
+[3] S Shashank and Brahma Naidu, "Google play store apps-data analysis and ratings prediction", International Research Journal of Engineering and Technology, vol. 7.12, pp. 265-274, 2020.
 
-[4] J. P, A. Nagam, P. Undavalli, P. P, V. P. K. S and V. K. K. K, "Leveraging CAT Boost for Enhanced Prediction of App Ratings in the Google Play Store," 2024 Second International Conference on Advances in Information Technology (ICAIT), Chikkamagaluru, Karnataka, India, 2024, pp. 1-6, doi: 10.1109/ICAIT61638.2024.10690600.
+[4] Seo, M.K., Yang, O.S. and Yang, Y.H., 2020. Global Big Data Analysis Exploring the Determinants of Application Ratings: Evidence from the Google Play Store. Journal of Korea Trade, 24(7), pp.1-28.
+
+
 
 
 
