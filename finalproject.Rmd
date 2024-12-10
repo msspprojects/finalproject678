@@ -616,21 +616,22 @@ Based on the results above, no pooling model gets very similar result with model
 
 ## Step 6: Add Interaction Term into Model 4
 
-Since based on the model 4 output, **Type and log(Price)** are statistically significant, I could try adding the interaction term between these two, here is the formula for the model, the model output can be found in the appendix section:
+Since based on the model 4 output, **Type and log(Reviews)** are statistically significant, I could try adding the interaction term between these two, here is the formula for the model, the model output can be found in the appendix section:
 
 \begin{align}
 Rating &= \beta_1 \cdot log(Reviews+1)+\beta_2 \cdot log(Installs+1)+ \nonumber \\
 &\beta_3 \cdot TypePaid+\beta_4 \cdot log(Price+1)+\beta_5 \cdot Content.Rating+ \nonumber \\
-&\beta_6 \cdot Last.Updated+\beta_7 \cdot Size+\beta_8 \cdot Category+\beta_9 \cdot log(Price+1)*Type \tag{8}
+&\beta_6 \cdot Last.Updated+\beta_7 \cdot Category+\beta_8 \cdot log(Reviews+1) \cdot TypePaid \tag{8}
 \end{align}
 
 ```{r, echo=FALSE}
-model4_interaction <- lm(Rating~log(Reviews+1)+log(Installs+1)+
-               log(Price+1)*Type+Category+Content.Rating+Last.Updated, 
+model4_interaction <- lm(Rating~log(Installs+1)+
+               log(Price+1)+Type*log(Reviews+1)+
+                 Content.Rating+Last.Updated, 
              data = df)
 anova(model4_interaction, model4, test = "Chisq")
 ```
-Based on the anova table result above, the chi-square test shows that model 2, which is the model without interaction term, is better. Thus, the additional interaction term between log(Price+1) and Type is not needed.
+Based on the anova table result above, the chi-square test shows that model 2, which is the model without interaction term, is better. Thus, the additional interaction term between log(Reviews+1) and Type is not needed.
 
 ## Step 7: Interpretation of Model 4 Selected
 
